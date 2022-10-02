@@ -1,0 +1,70 @@
+---
+title: "analysis"
+author: "Laura Bock Paulsen"
+date: "10/1/2022"
+output: html_document
+---
+```{r}
+pacman::p_load(tidyverse, ggplot2, esquisse)
+```
+
+```{r}
+data <- readbulk::read_bulk('data')
+
+data$question_type <- rep(times = length(data$prompts)/2, c('Confirmation', 'Disconfirmation'))
+data$answers <- tolower(data$answers)
+
+# labelling (first automatic, then checking manually)
+labels <- c()
+
+for(i in 1:length(data$prompts)){
+        if(grepl('it is okay', data$answers[i], fixed = TRUE)){
+                labels = c(labels, 'yes')
+        }
+        else if(grepl('it is not okay', data$answers[i], fixed = TRUE)){
+                labels = c(labels, 'no')
+        }
+        else if(nchar(data$answers[i]) > 100){
+                labels = c(labels, 'unknown')
+        }
+        else if(grepl('unknown', data$answers[i], fixed = TRUE)){
+                labels = c(labels, 'unknown')
+        }
+        else if(grepl('yes', data$answers[i], fixed = TRUE)){
+                labels = c(labels, 'yes')
+        }
+        else if(grepl('no', data$answers[i], fixed = TRUE)){
+                labels = c(labels, 'no')
+        }
+
+        else{
+                labels = c(labels, 'not_caught')
+        }
+}
+
+data$labels <- labels
+```
+
+
+```{r}
+plot_data <- data %>% group_by(question_type, labels, qna, ethical) %>% summarise(count = n())
+```
+
+
+```{r}
+labels <- c("False" = "No Prime", "True" = "Q&A Prime")
+labels1 <- c("ethical" = "Random Actions", "unethical" = "Unethical Actions")
+
+ggplot(plot_data) +
+  aes(x = labels, y = count, fill = question_type) +
+  geom_col() +
+  scale_fill_brewer(palette = "Paired" ) +
+  labs(x = "Labels", y = "Count", fill = "Question Type") +
+  theme_linedraw() +
+  facet_grid(cols = vars(qna), rows = vars(ethical), labeller=labeller(qna = labels, ethical = labels1))
+
+ggsave('plot.png', width = 10, height = 7)
+
+```
+
+
